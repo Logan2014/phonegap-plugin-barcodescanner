@@ -666,7 +666,7 @@ parentViewController:(UIViewController*)parentViewController
                                      below:[[self.overlayView.layer sublayers] objectAtIndex:0]];
     
     if ([self.barcodeInput respondsToSelector:@selector(setAttributedPlaceholder:)]) {
-        self.barcodeInput.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"штрих-код" attributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]}];
+        self.barcodeInput.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"наприклад 001020300" attributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]}];
     }
     
     self.barcodeInput.layer.cornerRadius = 5;
