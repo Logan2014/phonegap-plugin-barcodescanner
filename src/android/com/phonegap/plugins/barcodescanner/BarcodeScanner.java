@@ -23,7 +23,7 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.PermissionHelper;
 
-import com.google.zxing.client.android.Intents;
+import com.ds.android.scanner.Intents;
 
 /**
  * This calls out to the ZXing barcode reader and returns the result.
@@ -208,6 +208,7 @@ public class BarcodeScanner extends CordovaPlugin {
                 JSONObject obj = new JSONObject();
                 try {
                     obj.put(TEXT, intent.getStringExtra("SCAN_RESULT"));
+					obj.put("manual", intent.getStringExtra("manual"));
                     obj.put(FORMAT, intent.getStringExtra("SCAN_RESULT_FORMAT"));
                     obj.put(CANCELLED, false);
                 } catch (JSONException e) {
