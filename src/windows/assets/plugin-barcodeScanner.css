@@ -1,8 +1,8 @@
-.barcode-scanner-wrap {
+﻿.barcode-scanner-wrap {
     margin: 0;
     padding: 0;
     outline: 0;
-    font-size: 100%;
+    font-size: 18px;
     vertical-align: baseline;
     background: 0 0 black;
     position: fixed;
@@ -12,13 +12,14 @@
     height: 100%;
     z-index: 9999999;
     -ms-user-select: none;
+    pointer-events: auto;
 }
 
 .barcode-scanner-preview {
     width: auto;
-    height: calc(100% - 70px);
+    height: 100%;
     position: absolute;
-    top: calc(50% - 35px);
+    top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
 }
@@ -30,54 +31,72 @@
     width: 100%;
     height: 3px;
     background: red;
-    z-index: 9999999;
 }
 
 .barcode-scanner-app-bar {
-    height: 70px;
-    width: 100%;
-    padding-top: 10px;
-    z-index: 9999999;
-    text-align: center;
-    user-select: none;
-    position: absolute;
-    bottom: 0px;
-}
-
-.app-bar-action {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto;
-    font-family: "Segoe UI Symbol";
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.7);
     color: white;
-    font-size: 12px;
-    text-transform: lowercase;
-    text-align: center;
-    cursor: default;
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
 }
 
-@media all and (orientation: landscape) {
-    .app-bar-action {
-        float: right;
-        margin-right: 20px;
+.barcode-scanner-app-bar .hint {
+    margin-bottom: 8px;
+}
+
+.barcode-scanner-app-bar input {
+    margin-bottom: 8px;
+    border: 1px solid white;
+    border-radius: 8px;
+    width: calc(100% - 130px);
+    min-width: 100px;
+    height: 44px;
+    background-color: transparent;
+    padding: 0 4px;
+    font-size: 18px;
+    color: white;
+}
+
+.barcode-scanner-app-bar input:focus {
+    outline: none;
+}
+
+@media (max-width:320px) {
+    .barcode-scanner-app-bar input {
+        width: 100%;
     }
 }
 
-.app-bar-action::before {
-    font-size: 28px;
-    display: block;
-    height: 36px;
+.barcode-scanner-app-bar input:-ms-input-placeholder {
+  color: white;
 }
 
-.action-close::before {
-    content: "\E0C7";
-    /* close icon is larger so we re-size it to fit other icons */
-    font-size: 20px;
-    line-height: 40px;
+.barcode-scanner-app-bar input::-webkit-input-placeholder {
+  color: white;
 }
 
-.action-close:hover::before {
-    content: "\E0CA";
+.barcode-scanner-app-bar button {
+    margin-left: 8px;
+    border: 1px solid white;
+    border-radius: 8px;
+    max-width: 120px;
+    height: 44px;
+    background-color: transparent;
+    font-size: 18px;
+    color: white;
+    float: right;
+}
+
+.barcode-scanner-app-bar button:focus {
+    outline: none;
+}
+
+
+.barcode-scanner-app-bar button:active, .barcode-scanner-app-bar button:disabled {
+    opacity: 0.3;
 }
 
 .no-zoom {

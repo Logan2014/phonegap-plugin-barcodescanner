@@ -1,3 +1,4 @@
+﻿cordova.define("phonegap-plugin-barcodescanner.BarcodeScannerProxy", function(require, exports, module) {
 /*
  * Copyright (c) Microsoft Open Technologies, Inc. All rights reserved.
  *
@@ -42,6 +43,29 @@ var BARCODE_FORMAT = {
     65536: 'UPC_EAN_EXTENSION',
     131072: 'MSI',
     262144: 'PLESSEY'
+};
+
+var zXingBarcodeFormat = {
+    'AZTEC': ZXing.BarcodeFormat.aztec,
+    'CODABAR': ZXing.BarcodeFormat.codabar,
+    'CODE_39': ZXing.BarcodeFormat.code_39,
+    'CODE_93': ZXing.BarcodeFormat.code_93,
+    'CODE_128': ZXing.BarcodeFormat.code_128,
+    'DATA_MATRIX': ZXing.BarcodeFormat.data_MATRIX,
+    'EAN_8': ZXing.BarcodeFormat.ean_8,
+    'EAN_13': ZXing.BarcodeFormat.ean_13,
+    'ITF': ZXing.BarcodeFormat.itf,
+    'MAXICODE': ZXing.BarcodeFormat.maxicode,
+    'PDF_417': ZXing.BarcodeFormat.pdf_417,
+    'QR_CODE': ZXing.BarcodeFormat.qr_CODE,
+    'RSS_14': ZXing.BarcodeFormat.rss_14,
+    'RSS_EXPANDED': ZXing.BarcodeFormat.rss_EXPANDED,
+    'UPC_A': ZXing.BarcodeFormat.upc_A,
+    'UPC_E': ZXing.BarcodeFormat.upc_E,
+    'All_1D': ZXing.BarcodeFormat.all_1D,
+    'UPC_EAN_EXTENSION': ZXing.BarcodeFormat.upc_EAN_EXTENSION,
+    'MSI': ZXing.BarcodeFormat.msi,
+    'PLESSEY': ZXing.BarcodeFormat.plessey
 };
 
 /**
@@ -113,9 +137,11 @@ function videoPreviewRotationLookup(displayOrientation, isMirrored) {
  *
  * @class {BarcodeReader}
  */
-function BarcodeReader () {
+function BarcodeReader (formats) {
     this._promise = null;
     this._cancelled = false;
+    this._manualInput = null;
+    this._formats = formats || [];
 }
 
 /**
@@ -131,14 +157,13 @@ function BarcodeReader () {
  * @return  {BarcodeReader}  BarcodeReader instance that could be used for
  *   scanning
  */
-BarcodeReader.get = function (mediaCaptureInstance) {
+BarcodeReader.get = function (mediaCaptureInstance, formats) {
     if (mediaCaptureInstance.getPreviewFrameAsync && ZXing.BarcodeReader) {
-        return new BarcodeReader();
+        return new BarcodeReader(formats);
     }
 
     // If there is no corresponding API (Win8/8.1/Phone8.1) use old approach with WinMD library
     return new WinRTBarcodeReader.Reader();
-
 };
 
 /**
@@ -155,6 +180,9 @@ BarcodeReader.prototype.init = function (capture, width, height) {
     this._width = width;
     this._height = height;
     this._zxingReader = new ZXing.BarcodeReader();
+    this._zxingReader.options.possibleFormats = this._formats.map(function (format) {
+        return zXingBarcodeFormat[format];
+    });
 };
 
 /**
@@ -177,29 +205,39 @@ BarcodeReader.prototype.readCode = function () {
 
         var frame = new Windows.Media.VideoFrame(Imaging.BitmapPixelFormat.bgra8, frameWidth, frameHeight);
         return mediaCapture.getPreviewFrameAsync(frame)
-        .then(function (capturedFrame) {
+            .then(WinJS.Utilities.Scheduler.schedulePromiseIdle)
+            .then(function (capturedFrame) {
+                // Copy captured frame to buffer for further deserialization
+                var bitmap = capturedFrame.softwareBitmap;
+                var rawBuffer = new Streams.Buffer(bitmap.pixelWidth * bitmap.pixelHeight * 4);
+                capturedFrame.softwareBitmap.copyToBuffer(rawBuffer);
+                capturedFrame.close();
 
-            // Copy captured frame to buffer for further deserialization
-            var bitmap = capturedFrame.softwareBitmap;
-            var rawBuffer = new Streams.Buffer(bitmap.pixelWidth * bitmap.pixelHeight * 4);
-            capturedFrame.softwareBitmap.copyToBuffer(rawBuffer);
-            capturedFrame.close();
-
-            // Get raw pixel data from buffer
-            var data = new Uint8Array(rawBuffer.length);
-            var dataReader = Streams.DataReader.fromBuffer(rawBuffer);
-            dataReader.readBytes(data);
-            dataReader.close();
-
-            return zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.bgra32);
-        });
+                // Get raw pixel data from buffer
+                var data = new Uint8Array(rawBuffer.length);
+                var dataReader = Streams.DataReader.fromBuffer(rawBuffer);
+                performance.mark("1");
+                dataReader.readBytes(data);
+                performance.mark("2");
+                dataReader.close();
+                var result = zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.bgra32);
+                performance.mark("after");
+                return result;
+            });
     }
 
     var self = this;
     return scanBarcodeAsync(this._capture, this._zxingReader, this._width, this._height)
     .then(function (result) {
-        if (self._cancelled)
+        if (self._manualInput) {
+            return {
+                text: self._manualInput
+            };
+        }
+
+        if (self._cancelled) {
             return null;
+        }
 
         return result || (self._promise = self.readCode());
     });
@@ -208,8 +246,9 @@ BarcodeReader.prototype.readCode = function () {
 /**
  * Stops barcode search
  */
-BarcodeReader.prototype.stop = function () {
+BarcodeReader.prototype.stop = function (manualInput) {
     this._cancelled = true;
+    this._manualInput = manualInput;
 };
 
 function degreesToRotation(degrees) {
@@ -246,7 +285,6 @@ module.exports = {
             captureCancelButton,
             navigationButtonsDiv,
             previewMirroring,
-            closeButton,
             capture,
             reader;
 
@@ -294,22 +332,41 @@ module.exports = {
 
             navigationButtonsDiv = document.createElement("div");
             navigationButtonsDiv.className = "barcode-scanner-app-bar";
-            navigationButtonsDiv.onclick = function (e) {
-                e.cancelBubble = true;
-            };
 
-            closeButton = document.createElement("div");
-            closeButton.innerText = "close";
-            closeButton.className = "app-bar-action action-close";
-            navigationButtonsDiv.appendChild(closeButton);
+            var hint = document.createElement("div");
+            hint.innerText = "Якщо штрих-код не розпізнається, то введіть номер вручну:";
+            hint.className = "hint";
+            navigationButtonsDiv.appendChild(hint);
+
+            var inputPanel = document.createElement("div");
+            inputPanel.className = "code-input-panel";
+
+            var input = document.createElement("input");
+            input.placeholder = "наприклад 001020300";
+            input.addEventListener('input', updateUI);
+            inputPanel.appendChild(input);
+
+            var action = document.createElement("button");
+            action.innerText = "Відправити";
+            action.addEventListener('click', function () {
+                reader && reader.stop(input.value);
+            });
+            inputPanel.appendChild(action);
+
+            navigationButtonsDiv.appendChild(inputPanel);
 
             BarcodeReader.scanCancelled = false;
-            closeButton.addEventListener("click", cancelPreview, false);
             document.addEventListener('backbutton', cancelPreview, false);
 
             [capturePreview, capturePreviewAlignmentMark, navigationButtonsDiv].forEach(function (element) {
                 capturePreviewFrame.appendChild(element);
             });
+
+            updateUI();
+
+            function updateUI() {
+                action.disabled = !input.value;
+            }
         }
 
         function focus(controller) {
@@ -523,7 +580,7 @@ module.exports = {
          * Stops preview and then call success callback with cancelled=true
          * See https://github.com/phonegap-build/BarcodeScanner#using-the-plugin
          */
-        function cancelPreview() {
+        function cancelPreview(backbuttonEvent) {
             BarcodeReader.scanCancelled = true;
             reader && reader.stop();
         }
@@ -541,7 +598,13 @@ module.exports = {
         })
         .then(function (captureSettings) {
             checkCancelled();
-            reader = BarcodeReader.get(captureSettings.capture);
+            var formats = [];
+            if (args.length) {
+                formats = args[0].formats;
+                formats = formats && formats.split(',');
+            }
+
+            reader = BarcodeReader.get(captureSettings.capture, formats);
             reader.init(captureSettings.capture, captureSettings.width, captureSettings.height);
 
             // Add a small timeout before capturing first frame otherwise
@@ -584,3 +647,5 @@ module.exports = {
 };
 
 require("cordova/exec/proxy").add("BarcodeScanner", module.exports);
+
+});
