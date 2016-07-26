@@ -180,6 +180,11 @@ BarcodeReader.prototype.init = function (capture, width, height) {
     this._width = width;
     this._height = height;
     this._zxingReader = new ZXing.BarcodeReader();
+    this._zxingReader.autoRotate = false;
+    this._zxingReader.tryHarder = false;
+    this._zxingReader.tryInverted = false;
+    this._zxingReader.options.useCode39ExtendedMode = false;
+    this._zxingReader.options.useCode39RelaxedExtendedMode = false;
     this._zxingReader.options.possibleFormats = this._formats.map(function (format) {
         return zXingBarcodeFormat[format];
     });
@@ -203,13 +208,13 @@ BarcodeReader.prototype.readCode = function () {
         var Imaging = Windows.Graphics.Imaging;
         var Streams = Windows.Storage.Streams;
 
-        var frame = new Windows.Media.VideoFrame(Imaging.BitmapPixelFormat.bgra8, frameWidth, frameHeight);
+        var frame = new Windows.Media.VideoFrame(Imaging.BitmapPixelFormat.gray8, frameWidth, frameHeight);
         return mediaCapture.getPreviewFrameAsync(frame)
             .then(WinJS.Utilities.Scheduler.schedulePromiseIdle)
             .then(function (capturedFrame) {
                 // Copy captured frame to buffer for further deserialization
                 var bitmap = capturedFrame.softwareBitmap;
-                var rawBuffer = new Streams.Buffer(bitmap.pixelWidth * bitmap.pixelHeight * 4);
+                var rawBuffer = new Streams.Buffer(bitmap.pixelWidth * bitmap.pixelHeight);
                 capturedFrame.softwareBitmap.copyToBuffer(rawBuffer);
                 capturedFrame.close();
 
@@ -220,7 +225,7 @@ BarcodeReader.prototype.readCode = function () {
                 dataReader.readBytes(data);
                 performance.mark("2");
                 dataReader.close();
-                var result = zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.bgra32);
+                var result = zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.gray8);
                 performance.mark("after");
                 return result;
             });
@@ -321,12 +326,6 @@ module.exports = {
             capturePreviewFrame = document.createElement('div');
             capturePreviewFrame.className = "barcode-scanner-wrap";
 
-            capturePreview = document.createElement("video");
-            capturePreview.className = "barcode-scanner-preview";
-            capturePreview.addEventListener('click', function () {
-                focus();
-            });
-
             capturePreviewAlignmentMark = document.createElement('div');
             capturePreviewAlignmentMark.className = "barcode-scanner-mark";
 
@@ -345,6 +344,13 @@ module.exports = {
             input.placeholder = "наприклад 001020300";
             input.addEventListener('input', updateUI);
             inputPanel.appendChild(input);
+
+            capturePreview = document.createElement("video");
+            capturePreview.className = "barcode-scanner-preview";
+            capturePreview.addEventListener('click', function () {
+                focus();
+                input.blur();
+            });
 
             var action = document.createElement("button");
             action.innerText = "Відправити";
