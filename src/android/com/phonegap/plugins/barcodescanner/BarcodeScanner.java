@@ -45,7 +45,7 @@ public class BarcodeScanner extends CordovaPlugin {
     private static final String SHOW_FLIP_CAMERA_BUTTON = "showFlipCameraButton";
     private static final String FORMATS = "formats";
     private static final String PROMPT = "prompt";
-    private static final String SCAN_INTENT = "com.google.zxing.client.android.SCAN";
+    private static final String SCAN_INTENT = "com.ds.android.scanner.SCAN";
     private static final String ENCODE_DATA = "ENCODE_DATA";
     private static final String ENCODE_TYPE = "ENCODE_TYPE";
     private static final String ENCODE_INTENT = "com.phonegap.plugins.barcodescanner.ENCODE";
