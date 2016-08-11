@@ -181,10 +181,7 @@ BarcodeReader.prototype.init = function (capture, width, height) {
     this._height = height;
     this._zxingReader = new ZXing.BarcodeReader();
     this._zxingReader.autoRotate = false;
-    this._zxingReader.tryHarder = false;
     this._zxingReader.tryInverted = false;
-    this._zxingReader.options.useCode39ExtendedMode = false;
-    this._zxingReader.options.useCode39RelaxedExtendedMode = false;
     this._zxingReader.options.possibleFormats = this._formats.map(function (format) {
         return zXingBarcodeFormat[format];
     });
@@ -221,12 +218,9 @@ BarcodeReader.prototype.readCode = function () {
                 // Get raw pixel data from buffer
                 var data = new Uint8Array(rawBuffer.length);
                 var dataReader = Streams.DataReader.fromBuffer(rawBuffer);
-                performance.mark("1");
                 dataReader.readBytes(data);
-                performance.mark("2");
                 dataReader.close();
                 var result = zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.gray8);
-                performance.mark("after");
                 return result;
             });
     }
