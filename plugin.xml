@@ -58,6 +58,19 @@
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
+		    <activity
+				android:name="com.ds.android.scanner.CaptureActivity"
+				android:screenOrientation="portrait"
+				android:clearTaskOnLaunch="true"
+				android:stateNotNeeded="true"
+				android:theme="@style/CaptureTheme"
+				android:windowSoftInputMode="stateAlwaysHidden">
+
+				<intent-filter>
+					<action android:name="com.ds.android.scanner.SCAN"/>
+					<category android:name="android.intent.category.DEFAULT"/>
+				</intent-filter>
+			</activity>
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/manifest">
